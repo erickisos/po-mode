@@ -62,7 +62,6 @@
 ;;    of msgstr[1].) Reason: These two strings are usually very similar.
 
 ;;; Code:
-
 (defconst po-mode-version-string "2.27" "\
 Version number of this version of po-mode.el.")
 
@@ -89,7 +88,7 @@ Version number of this version of po-mode.el.")
       nil)
     (defmacro defcustom (var value doc &rest args)
       `(defvar ,var ,value ,doc))))
-
+
 ;;; Customisation.
 
 (defgroup po nil
@@ -133,6 +132,12 @@ Value is nil, t, or ask."
 
 (defcustom po-auto-replace-revision-date t
   "*Automatically revise date in headers.  Value is nil, t, or ask."
+  :type '(choice (const nil)
+                 (const t)
+                 (const ask))
+  :group 'po)
+
+(defcustom po-auto-replace-last-translator t
   :type '(choice (const nil)
                  (const t)
                  (const ask))
@@ -481,7 +486,7 @@ or remove the -m if you are not using the GNU version of 'uuencode'."
 (defvar po-subedit-mode-syntax-table
   (copy-syntax-table text-mode-syntax-table)
   "Syntax table used while in PO mode.")
-
+
 ;;; Emacs portability matters - part II.
 
 ;;; Many portability matters are addressed in this page.  The few remaining
@@ -499,6 +504,21 @@ or remove the -m if you are not using the GNU version of 'uuencode'."
     (defun po-match-string (number)
       "Return string of text matched by last search."
       (po-buffer-substring (match-beginning number) (match-end number)))))
+
+(defmacro po-with-temp-buffer (&rest forms)
+      "Create a temporary buffer, and evaluate FORMS there like 'progn'."
+      (let ((curr-buffer (make-symbol "curr-buffer"))
+            (temp-buffer (make-symbol "temp-buffer")))
+        `(let ((,curr-buffer (current-buffer))
+               (,temp-buffer (get-buffer-create
+                              (generate-new-buffer-name " *po-temp*"))))
+           (unwind-protect
+               (progn
+                 (set-buffer ,temp-buffer)
+                 ,@forms)
+             (set-buffer ,curr-buffer)
+             (and (buffer-name ,temp-buffer)
+                  (kill-buffer ,temp-buffer))))))
 
 ;; Handle missing 'with-temp-buffer' function.
 (eval-and-compile
@@ -653,7 +673,7 @@ The current buffer should be in PO mode, when this function is called."
 (defvar po-string-start)
 (defvar po-string-end)
 (defvar po-marking-overlay)
-
+
 ;;; PO mode variables and constants (usually not to customize).
 
 ;; The textdomain should really be "gettext", only trying it for now.
@@ -930,7 +950,7 @@ M-S  Ignore path          M-A  Ignore PO file      *M-L  Ignore lexicon
 ;;                               ("^#[.,:].*" nil include)
 ;;                               ("^\\(msgid\\|msgstr\\) *\"" nil keyword)
 ;;                               ("^\"\\|\"$" nil keyword))))
-
+
 ;;; Mode activation.
 
 ;; Emacs 21.2 comes with po-find-file-coding-system. We give preference
@@ -1080,7 +1100,7 @@ all reachable through 'M-x customize', in group 'Emacs.Editing.I18n.Po'."
     (define-key po-subedit-mode-map "\C-c\C-k" 'po-subedit-abort)
     po-subedit-mode-map)
   "Keymap while editing a PO mode entry (or the full PO file).")
-
+
 ;;; Window management.
 
 (make-variable-buffer-local 'po-mode-flag)
@@ -1203,7 +1223,7 @@ Position %d/%d; %d translated, %d fuzzy, %d untranslated, %d obsolete")
         (split-window)
         (switch-to-buffer (other-buffer)))
     (other-window 1)))
-
+
 ;;; Processing the PO file header entry.
 
 (defun po-check-file-header ()
@@ -1249,6 +1269,27 @@ Can be customized with the `po-auto-update-file-header' variable."
                       (insert "\n")))))))
     (message (_"PO Header Entry was not updated..."))))
 
+(defun po-replace-last-translator ()
+  "Replace the last translator based on your Git config in the PO file header."
+  (if (or (eq po-auto-replace-last-translator t)
+          (and (eq po-auto-replace-last-translator 'ask)
+               (y-or-n-p (_"May I set Last-Translator? "))))
+      (save-excursion
+        (goto-char (point-min))
+        (if (re-search-forward "^\"Last-Translator:.*\"" nil t)
+            (let* ((buffer-read-only po-read-only)
+                   (author-name (progn))
+                   (author-email (progn)))
+              (replace-match
+               (concat "\"Last-Translator: "
+                       author-name
+                       "<" author-email ">"
+                       "\\n\"")
+               t t))))
+    (message ""))
+  (message (_ "Last-Translator should be adjusted..."))
+  nil)
+
 (defun po-replace-revision-date ()
   "Replace the revision date by current time in the PO file header."
   (if (fboundp 'format-time-string)
@@ -1275,7 +1316,7 @@ Can be customized with the `po-auto-update-file-header' variable."
     (message (_"PO-Revision-Date should be adjusted...")))
   ;; Return nil to indicate that the buffer has not yet been saved.
   nil)
-
+
 ;;; Handling span of entry, entry type and entry attributes.
 
 (defun po-find-span-of-entry ()
@@ -1402,7 +1443,7 @@ fuzzy, untranslated, or translated."
                  (concat "\\(\n#, " name "$\\|, " name "$\\| " name ",\\)")
                  nil t)
                 (replace-match "" t t)))))))
-
+
 ;;; Entry positionning.
 
 (defun po-say-location-depth ()
@@ -1690,7 +1731,7 @@ no entries of the other types."
               (setq goal 'untranslated))))))
   ;; Display this entry nicely.
   (po-current-entry))
-
+
 ;;; Killing and yanking fields.
 
 (defun po-extract-unquoted (buffer start end)
@@ -1920,7 +1961,7 @@ or completely delete an obsolete entry, saving its msgstr on the kill ring."
            (re-search-backward po-any-msgstr-block-regexp nil t))
          (po-current-entry)
          (message ""))))
-
+
 ;;; Killing and yanking comments.
 
 (defvar po-comment-regexp
@@ -2314,7 +2355,7 @@ read `po-subedit-ediff' documentation."
   (interactive)
   (po-edit-msgstr)
   (po-subedit-ediff))
-
+
 ;;; String normalization and searching.
 
 (defun po-normalize-old-style (explain)
@@ -2370,7 +2411,7 @@ To minibuffer messages sent while normalizing, add the EXPLAIN string."
   ;; A bizarre format might have fooled the counters, so recompute
   ;; them to make sure their value is dependable.
   (po-compute-counters nil))
-
+
 ;;; Multiple PO files.
 
 (defun po-show-auxiliary-list ()
@@ -2499,7 +2540,7 @@ without moving its cursor."
         (po-consider-as-auxiliary)
         (or (po-seek-equivalent-translation name string)
             (find-file name)))))
-
+
 ;;; Original program sources as context.
 
 (defun po-show-source-path ()
@@ -2605,7 +2646,7 @@ If the command is repeated many times in a row, cycle through contexts."
         (completing-read (_"Which source context? ") po-reference-alist nil t)
         po-reference-alist))
     (error (_"No resolved source references"))))
-
+
 ;;; String marking in program sources, through TAGS table.
 
 ;; Globally defined within tags.el.
@@ -2758,7 +2799,7 @@ keyword for subsequent commands, also added to possible completions."
                                      po-keywords nil t )))
       (if (string-equal keyword "") (setq keyword default))
       (po-mark-found-string keyword))))
-
+
 ;;; Unknown mode specifics.
 
 (defun po-preset-string-functions ()
@@ -2788,7 +2829,7 @@ These variables are locally set in source buffer only when not already bound."
 (defun po-mark-unknown-string (start end keyword)
   "Dummy function to mark a given string.  May not be called."
   (error (_"Dummy function called")))
-
+
 ;;; Awk mode specifics.
 
 (defun po-find-awk-string (keywords)
@@ -2848,7 +2889,7 @@ Leave point after marked string."
     (save-excursion
       (goto-char start)
       (insert keyword "("))))
-
+
 ;;; Bash mode specifics.
 
 (defun po-find-bash-string (keywords)
@@ -2890,7 +2931,7 @@ Leave point after marked string."
   (goto-char start)
   (insert "$")
   (goto-char (1+ end)))
-
+
 ;;; C or C++ mode specifics.
 
 ;;; A few long string cases (submitted by Ben Pfaff).
@@ -2978,7 +3019,7 @@ Leave point after marked string."
     (insert keyword)
     (or (string-equal keyword "_") (insert " "))
     (insert "(")))
-
+
 ;;; Emacs LISP mode specifics.
 
 (defun po-find-emacs-lisp-string (keywords)
@@ -3027,7 +3068,7 @@ Leave point after marked string."
     (goto-char start)
     (insert "(" keyword)
     (or (string-equal keyword "_") (insert " "))))
-
+
 ;;; Python mode specifics.
 
 (defun po-find-python-string (keywords)
@@ -3156,7 +3197,7 @@ Leave point after marked string."
            (save-excursion
              (goto-char start)
              (insert keyword "(")))))
-
+
 ;;; Miscellaneous features.
 
 (defun po-help ()

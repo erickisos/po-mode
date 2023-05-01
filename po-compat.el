@@ -2,7 +2,7 @@
 
 ;; Copyright (C) 1995-2002, 2010, 2016, 2019 Free Software Foundation, Inc.
 
-;; Authors: François Pinard <pinard@iro.umontreal.ca>,
+;; Authors: Francois Pinard <pinard@iro.umontreal.ca>,
 ;;          Greg McGary <gkm@magilla.cichlid.com>,
 ;;          Bruno Haible <bruno@clisp.org>.
 ;; Keywords: i18n, files
@@ -33,7 +33,7 @@
 ;; for editing PO files, see po-mode.el.
 
 ;;; Code:
-
+
 ;;; Emacs portability matters.
 
 (defconst po-content-type-charset-alist
