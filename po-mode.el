@@ -74,8 +74,12 @@ Version number of this version of po-mode.el.")
       (defsubst set-translation-domain (string) nil))
   (or (fboundp 'translate-string)
       (defsubst translate-string (string) string)))
-(defsubst _ (string) (translate-string string))
-(defsubst N_ (string) string)
+(defsubst _ (string)
+  "Translate STRING alias."
+  (translate-string string))
+(defsubst N_ (string)
+  "Identity STRING."
+  string)
 
 ;; Handle missing 'customs' package.
 (eval-and-compile
@@ -92,7 +96,7 @@ Version number of this version of po-mode.el.")
 ;;; Customisation.
 
 (defgroup po nil
-  "Major mode for editing PO files"
+  "Major mode for editing PO files."
   :group 'i18n)
 
 (defcustom po-auto-edit-with-msgid nil
@@ -109,8 +113,8 @@ Version number of this version of po-mode.el.")
   "*Automatically delete previous msgid (marked #|) when editing entry.
 Value is nil, t, or ask."
   :type '(choice (const nil)
-                 (const t)
-                 (const ask))
+          (const t)
+          (const ask))
   :group 'po)
 
 (defcustom po-auto-select-on-unfuzzy nil
@@ -126,21 +130,22 @@ Value is nil, t, or ask."
 (defcustom po-auto-update-file-header t
   "*Automatically revise headers.  Value is nil, t, or ask."
   :type '(choice (const nil)
-                 (const t)
-                 (const ask))
+          (const t)
+          (const ask))
   :group 'po)
 
 (defcustom po-auto-replace-revision-date t
   "*Automatically revise date in headers.  Value is nil, t, or ask."
   :type '(choice (const nil)
-                 (const t)
-                 (const ask))
+          (const t)
+          (const ask))
   :group 'po)
 
 (defcustom po-auto-replace-last-translator t
+  "*Automatically replace the Last-Translator header. Value is nil, t, or ask."
   :type '(choice (const nil)
-                 (const t)
-                 (const ask))
+          (const t)
+          (const ask))
   :group 'po)
 
 (defcustom po-default-file-header "\
@@ -505,21 +510,6 @@ or remove the -m if you are not using the GNU version of 'uuencode'."
       "Return string of text matched by last search."
       (po-buffer-substring (match-beginning number) (match-end number)))))
 
-(defmacro po-with-temp-buffer (&rest forms)
-      "Create a temporary buffer, and evaluate FORMS there like 'progn'."
-      (let ((curr-buffer (make-symbol "curr-buffer"))
-            (temp-buffer (make-symbol "temp-buffer")))
-        `(let ((,curr-buffer (current-buffer))
-               (,temp-buffer (get-buffer-create
-                              (generate-new-buffer-name " *po-temp*"))))
-           (unwind-protect
-               (progn
-                 (set-buffer ,temp-buffer)
-                 ,@forms)
-             (set-buffer ,curr-buffer)
-             (and (buffer-name ,temp-buffer)
-                  (kill-buffer ,temp-buffer))))))
-
 ;; Handle missing 'with-temp-buffer' function.
 (eval-and-compile
   (if (fboundp 'with-temp-buffer)
@@ -548,8 +538,8 @@ or remove the -m if you are not using the GNU version of 'uuencode'."
     (defun po-kill-new (string)
       "Push STRING onto the kill ring, for Emacs 18 where kill-new is missing."
       (po-with-temp-buffer
-        (insert string)
-        (kill-region (point-min) (point-max))))))
+       (insert string)
+       (kill-region (point-min) (point-max))))))
 
 ;; Handle missing 'read-event' function.
 (eval-and-compile
@@ -825,28 +815,28 @@ M-S  Ignore path          M-A  Ignore PO file      *M-L  Ignore lexicon
      ["Find next string" po-tags-search t]
      ["Mark preferred" po-mark-translatable t]
      ["Mark with keyword" po-select-mark-and-mark t])
-     "---"
-     ["Version info" po-mode-version
-      :help "Display version number of PO mode"]
-     ["Help page" po-help
-      :help "Show the PO mode help screen"]
-     ["Validate" po-validate
-      :help "Check validity of current translation file using `msgfmt'"]
-     ["Mail officially" po-send-mail
-      :help "Send current translation file to the Translation Robot by mail"]
-     ["Edit out full" po-edit-out-full
-      :help "Leave PO mode to edit translation file using fundamental mode"]
-     "---"
-     ["Forceful quit" po-quit
-      :help "Close (kill) current translation file without saving"]
-     ["Soft quit" po-confirm-and-quit
-      :help "Save current translation file, than close (kill) it"]))
+    "---"
+    ["Version info" po-mode-version
+     :help "Display version number of PO mode"]
+    ["Help page" po-help
+     :help "Show the PO mode help screen"]
+    ["Validate" po-validate
+     :help "Check validity of current translation file using `msgfmt'"]
+    ["Mail officially" po-send-mail
+     :help "Send current translation file to the Translation Robot by mail"]
+    ["Edit out full" po-edit-out-full
+     :help "Leave PO mode to edit translation file using fundamental mode"]
+    "---"
+    ["Forceful quit" po-quit
+     :help "Close (kill) current translation file without saving"]
+    ["Soft quit" po-confirm-and-quit
+     :help "Save current translation file, than close (kill) it"]))
 
 
 (defconst po-subedit-mode-menu-layout
   `("PO-Edit"
     ["Ediff and merge translation variants" po-subedit-ediff
-      :help "Call `ediff' for merging variants"]
+     :help "Call `ediff' for merging variants"]
     ["Cycle through auxiliary files" po-subedit-cycle-auxiliary t]
     "---"
     ["Abort edit" po-subedit-abort
@@ -956,7 +946,7 @@ M-S  Ignore path          M-A  Ignore PO file      *M-L  Ignore lexicon
 ;; Emacs 21.2 comes with po-find-file-coding-system. We give preference
 ;; to the version shipped with Emacs.
 (if (not (fboundp 'po-find-file-coding-system))
-  (require 'po-compat))
+    (require 'po-compat))
 
 (defvar po-mode-abbrev-table nil
   "Abbrev table used while in PO mode.")
@@ -1087,6 +1077,7 @@ all reachable through 'M-x customize', in group 'Emacs.Editing.I18n.Po'."
   (set (make-local-variable 'po-marking-overlay) (po-create-overlay))
 
   (add-hook 'write-contents-hooks 'po-replace-revision-date)
+  (add-hook 'write-contents-hooks 'po-replace-last-translator)
 
   (run-hooks 'po-mode-hook)
   (message (_"You may type 'h' or '?' for a short PO mode reminder.")))
@@ -1269,25 +1260,32 @@ Can be customized with the `po-auto-update-file-header' variable."
                       (insert "\n")))))))
     (message (_"PO Header Entry was not updated..."))))
 
+(defun replace-last-translator-p (auto-replace-last-translator)
+  "Check against the AUTO-REPLACE-LAST-TRANSLATOR variable whether the last-translator header should be replaced."
+  (or (eq auto-replace-last-translator t)
+      (and (eq auto-replace-last-translator 'ask)
+           (y-or-n-p (_"May I set Last-Translator? ")))))
+
 (defun po-replace-last-translator ()
   "Replace the last translator based on your Git config in the PO file header."
-  (if (or (eq po-auto-replace-last-translator t)
-          (and (eq po-auto-replace-last-translator 'ask)
-               (y-or-n-p (_"May I set Last-Translator? "))))
+  (if (replace-last-translator-p po-auto-replace-last-translator)
       (save-excursion
         (goto-char (point-min))
         (if (re-search-forward "^\"Last-Translator:.*\"" nil t)
             (let* ((buffer-read-only po-read-only)
-                   (author-name (progn))
-                   (author-email (progn)))
+                   (author-name (or (string-trim (shell-command-to-string "git config user.name"))
+                                    (read-string "Author name: ")))
+                   (author-email (or (string-trim (shell-command-to-string "git config user.email"))
+                                     (read-string "Author email: "))))
               (replace-match
                (concat "\"Last-Translator: "
                        author-name
                        "<" author-email ">"
                        "\\n\"")
-               t t))))
-    (message ""))
-  (message (_ "Last-Translator should be adjusted..."))
+               t t))
+          (message "")))
+    (message (_"Last-Translator should be adjusted...")))
+  ;; Return nil to indicate that the buffer has not yet been saved.
   nil)
 
 (defun po-replace-revision-date ()
@@ -1308,10 +1306,10 @@ Can be customized with the `po-auto-update-file-header' variable."
                                      (/ minutes 60)
                                      (% minutes 60))))
                   (replace-match
-                       (concat "\"PO-Revision-Date: "
-                               (format-time-string "%Y-%m-%d %H:%M" time)
-                               zone "\\n\"")
-                       t t))))
+                   (concat "\"PO-Revision-Date: "
+                           (format-time-string "%Y-%m-%d %H:%M" time)
+                           zone "\\n\"")
+                   t t))))
         (message ""))
     (message (_"PO-Revision-Date should be adjusted...")))
   ;; Return nil to indicate that the buffer has not yet been saved.
@@ -1601,7 +1599,7 @@ If WRAP is not nil, the search may wrap around the buffer."
   (if (or (eq po-entry-type 'untranslated)
           (eq po-entry-type 'obsolete)
           (prog1 (y-or-n-p (_"Really lose previous translation? "))
-                 (message "")))
+            (message "")))
       ;; In an entry with plural forms, use the msgid_plural string,
       ;; as it is more general than the msgid string.
       (if (po-set-msgstr-form (or (po-get-msgid_plural) (po-get-msgid)))
@@ -1784,39 +1782,39 @@ generated lines in the returned string.  Evaluating FORM should insert the
 wanted string in the buffer which is current at the time of evaluation.
 If FORM is itself a string, then this string is used for insertion."
   (po-with-temp-buffer
-    (if (stringp form)
-        (insert form)
-      (push-mark)
-      (eval form))
-    (goto-char (point-min))
-    (let ((multi-line (re-search-forward "[^\n]\n+[^\n]" nil t)))
-      (goto-char (point-min))
-      (while (re-search-forward "[\"\a\b\f\n\r\t\\]" nil t)
-        (cond ((eq (preceding-char) ?\") (replace-match "\\\"" t t))
-              ((eq (preceding-char) ?\a) (replace-match "\\a" t t))
-              ((eq (preceding-char) ?\b) (replace-match "\\b" t t))
-              ((eq (preceding-char) ?\f) (replace-match "\\f" t t))
-              ((eq (preceding-char) ?\n)
-               (replace-match (if (or (not multi-line) (eobp))
-                                  "\\n"
-                                "\\n\"\n\"")
-                              t t))
-              ((eq (preceding-char) ?\r) (replace-match "\\r" t t))
-              ((eq (preceding-char) ?\t) (replace-match "\\t" t t))
-              ((eq (preceding-char) ?\\) (replace-match "\\\\" t t))))
-      (goto-char (point-min))
-      (if prefix (insert prefix " "))
-      (insert (if multi-line "\"\"\n\"" "\""))
-      (goto-char (point-max))
-      (insert "\"")
-      (if prefix (insert "\n"))
-      (if obsolete
-          (progn
-            (goto-char (point-min))
-            (while (not (eobp))
-              (or (eq (following-char) ?\n) (insert "#~ "))
-              (search-forward "\n"))))
-      (buffer-string))))
+   (if (stringp form)
+       (insert form)
+     (push-mark)
+     (eval form))
+   (goto-char (point-min))
+   (let ((multi-line (re-search-forward "[^\n]\n+[^\n]" nil t)))
+     (goto-char (point-min))
+     (while (re-search-forward "[\"\a\b\f\n\r\t\\]" nil t)
+       (cond ((eq (preceding-char) ?\") (replace-match "\\\"" t t))
+             ((eq (preceding-char) ?\a) (replace-match "\\a" t t))
+             ((eq (preceding-char) ?\b) (replace-match "\\b" t t))
+             ((eq (preceding-char) ?\f) (replace-match "\\f" t t))
+             ((eq (preceding-char) ?\n)
+              (replace-match (if (or (not multi-line) (eobp))
+                                 "\\n"
+                               "\\n\"\n\"")
+                             t t))
+             ((eq (preceding-char) ?\r) (replace-match "\\r" t t))
+             ((eq (preceding-char) ?\t) (replace-match "\\t" t t))
+             ((eq (preceding-char) ?\\) (replace-match "\\\\" t t))))
+     (goto-char (point-min))
+     (if prefix (insert prefix " "))
+     (insert (if multi-line "\"\"\n\"" "\""))
+     (goto-char (point-max))
+     (insert "\"")
+     (if prefix (insert "\n"))
+     (if obsolete
+         (progn
+           (goto-char (point-min))
+           (while (not (eobp))
+             (or (eq (following-char) ?\n) (insert "#~ "))
+             (search-forward "\n"))))
+     (buffer-string))))
 
 (defun po-get-msgid ()
   "Extract and return the unquoted msgid string."
@@ -1977,14 +1975,14 @@ If KILL-FLAG, then add the unquoted comment to the kill ring."
       (goto-char po-start-of-entry)
       (if (re-search-forward po-comment-regexp po-end-of-entry t)
           (po-with-temp-buffer
-            (insert-buffer-substring buffer (match-beginning 0) (match-end 0))
-            (goto-char (point-min))
-            (while (not (eobp))
-              (if (looking-at (if obsolete "#\\(\n\\| \\)" "# ?"))
-                  (replace-match "" t t))
-              (forward-line 1))
-            (and kill-flag (copy-region-as-kill (point-min) (point-max)))
-            (buffer-string))
+           (insert-buffer-substring buffer (match-beginning 0) (match-end 0))
+           (goto-char (point-min))
+           (while (not (eobp))
+             (if (looking-at (if obsolete "#\\(\n\\| \\)" "# ?"))
+                 (replace-match "" t t))
+             (forward-line 1))
+           (and kill-flag (copy-region-as-kill (point-min) (point-max)))
+           (buffer-string))
         ""))))
 
 (defun po-set-comment (form)
@@ -1995,17 +1993,17 @@ The string is properly recommented before the replacement occurs."
   (let ((obsolete (eq po-entry-type 'obsolete))
         string)
     (po-with-temp-buffer
-      (if (stringp form)
-          (insert form)
-        (push-mark)
-        (eval form))
-      (if (not (or (bobp) (= (preceding-char) ?\n)))
-          (insert "\n"))
-      (goto-char (point-min))
-      (while (not (eobp))
-        (insert (if (= (following-char) ?\n) "#" "# "))
-        (search-forward "\n"))
-      (setq string (buffer-string)))
+     (if (stringp form)
+         (insert form)
+       (push-mark)
+       (eval form))
+     (if (not (or (bobp) (= (preceding-char) ?\n)))
+         (insert "\n"))
+     (goto-char (point-min))
+     (while (not (eobp))
+       (insert (if (= (following-char) ?\n) "#" "# "))
+       (search-forward "\n"))
+     (setq string (buffer-string)))
     (goto-char po-start-of-entry)
     (if (re-search-forward po-comment-regexp po-end-of-entry t)
         (if (not (string-equal (po-match-string 0) string))
@@ -2078,15 +2076,15 @@ comments) from the current entry, if the user gives the permission."
                            (progn
                              (setq overlays
                                    (mapcar (function
-                                             (lambda (region)
-                                               (let ((overlay (po-create-overlay)))
-                                                 (po-highlight overlay (car region) (cdr region))
-                                                 overlay)))
+                                            (lambda (region)
+                                              (let ((overlay (po-create-overlay)))
+                                                (po-highlight overlay (car region) (cdr region))
+                                                overlay)))
                                            previous-regions))
                              ;; Scroll, to show the previous-regions.
                              (goto-char (car (car previous-regions)))
                              (prog1 (y-or-n-p (_"Delete previous msgid comments? "))
-                                    (message "")))
+                               (message "")))
                          (mapc 'po-dehighlight overlays)))))
             (let ((buffer-read-only po-read-only))
               (dolist (region previous-regions)
@@ -2533,7 +2531,7 @@ without moving its cursor."
   (po-find-span-of-entry)
   (if po-auxiliary-list
       (let ((string
-              (buffer-substring po-start-of-msgid po-start-of-msgstr-block))
+             (buffer-substring po-start-of-msgid po-start-of-msgstr-block))
             (name (car (assoc (completing-read (_"Which auxiliary file? ")
                                                po-auxiliary-list nil t)
                               po-auxiliary-list))))
@@ -2558,8 +2556,8 @@ without moving its cursor."
   "Add a given DIRECTORY, requested interactively, to the source search path."
   (interactive "DDirectory for search path: ")
   (setq po-search-path (cons (list (if (string-match "/$" directory)
-                                         directory
-                                       (concat directory "/")))
+                                       directory
+                                     (concat directory "/")))
                              po-search-path))
   (setq po-reference-check 0)
   (po-show-source-path))
@@ -2755,7 +2753,7 @@ Disregard some simple strings which are most probably non-translatable."
 (defun po-mark-found-string (keyword)
   "Mark last found string in program sources as translatable, using KEYWORD."
   (if (not po-string-contents)
-    (error (_"No such string")))
+      (error (_"No such string")))
   (and po-highlighting (po-dehighlight po-marking-overlay))
   (let ((contents po-string-contents)
         (buffer po-string-buffer)
@@ -3254,38 +3252,38 @@ Leave point after marked string."
 (defun po-msgfmt-version-check ()
   "'msgfmt' from GNU gettext 0.10.36 or greater is required."
   (po-with-temp-buffer
-    (or
-     ;; Don't bother checking again.
-     po-msgfmt-version-checked
+   (or
+    ;; Don't bother checking again.
+    po-msgfmt-version-checked
 
-     (and
-      ;; Make sure 'msgfmt' is available.
-      (condition-case nil
-          (call-process po-msgfmt-program
-                        nil t nil "--verbose" "--version")
-        (file-error nil))
+    (and
+     ;; Make sure 'msgfmt' is available.
+     (condition-case nil
+         (call-process po-msgfmt-program
+                       nil t nil "--verbose" "--version")
+       (file-error nil))
 
-      ;; Make sure there's a version number in the output:
-      ;; 0.11 or 0.10.36 or 0.19.5.1 or 0.11-pre1 or 0.16.2-pre1
-      (progn (goto-char (point-min))
-             (or (looking-at ".* \\([0-9]+\\)\\.\\([0-9]+\\)$")
-                 (looking-at ".* \\([0-9]+\\)\\.\\([0-9]+\\)\\.\\([0-9]+\\)$")
-                 (looking-at ".* \\([0-9]+\\)\\.\\([0-9]+\\)\\.\\([0-9]+\\)\\.\\([0-9]+\\)$")
-                 (looking-at ".* \\([0-9]+\\)\\.\\([0-9]+\\)[-_A-Za-z0-9]+$")
-                 (looking-at ".* \\([0-9]+\\)\\.\\([0-9]+\\)\\.\\([0-9]+\\)[-_A-Za-z0-9]+$")))
+     ;; Make sure there's a version number in the output:
+     ;; 0.11 or 0.10.36 or 0.19.5.1 or 0.11-pre1 or 0.16.2-pre1
+     (progn (goto-char (point-min))
+            (or (looking-at ".* \\([0-9]+\\)\\.\\([0-9]+\\)$")
+                (looking-at ".* \\([0-9]+\\)\\.\\([0-9]+\\)\\.\\([0-9]+\\)$")
+                (looking-at ".* \\([0-9]+\\)\\.\\([0-9]+\\)\\.\\([0-9]+\\)\\.\\([0-9]+\\)$")
+                (looking-at ".* \\([0-9]+\\)\\.\\([0-9]+\\)[-_A-Za-z0-9]+$")
+                (looking-at ".* \\([0-9]+\\)\\.\\([0-9]+\\)\\.\\([0-9]+\\)[-_A-Za-z0-9]+$")))
 
-      ;; Make sure the version is recent enough.
-      (>= (string-to-number
-           (format "%d%03d%03d"
-                   (string-to-number (match-string 1))
-                   (string-to-number (match-string 2))
-                   (string-to-number (or (match-string 3) "0"))))
-          010036)
+     ;; Make sure the version is recent enough.
+     (>= (string-to-number
+          (format "%d%03d%03d"
+                  (string-to-number (match-string 1))
+                  (string-to-number (match-string 2))
+                  (string-to-number (or (match-string 3) "0"))))
+         010036)
 
-      ;; Remember the outcome.
-      (setq po-msgfmt-version-checked t))
+     ;; Remember the outcome.
+     (setq po-msgfmt-version-checked t))
 
-     (error (_"'msgfmt' from GNU gettext 0.10.36 or greater is required")))))
+    (error (_"'msgfmt' from GNU gettext 0.10.36 or greater is required")))))
 
 (defun po-guess-archive-name ()
   "Return the ideal file name for this PO file in the central archives."
@@ -3301,7 +3299,7 @@ Leave point after marked string."
       (goto-char start-of-header)
       (if (re-search-forward "\n\
 \"Project-Id-Version: \\(GNU \\|Free \\)?\\([^\n ]+\\) \\([^\n ]+\\)\\\\n\"$"
-           end-of-header t)
+                             end-of-header t)
           (setq package (po-match-string 2)
                 version (po-match-string 3)))
       (if (or (not package) (string-equal package "PACKAGE")
